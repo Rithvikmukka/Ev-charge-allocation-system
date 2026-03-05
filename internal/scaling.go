@@ -41,6 +41,13 @@ func (n *Node) UpdateMembership(mu MembershipUpdate) {
 	if n.ID != 0 {
 		n.PeerIDs[self] = n.ID
 	}
+
+	// Trigger auto-rebalancing after membership change
+	go func() {
+		time.Sleep(1 * time.Second)
+		fmt.Printf("[Phase9] Membership updated -> triggering rebalancing\n")
+		n.RecoverFromPeers(context.Background(), DefaultRecoveryConfig())
+	}()
 }
 
 func (n *Node) MembershipSnapshot() MembershipUpdate {

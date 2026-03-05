@@ -12,11 +12,12 @@ import (
 )
 
 type NodeConfig struct {
-	ID    int
-	Port  int
-	Bind  string
-	Host  string
-	Peers []string
+	ID       int
+	Port     int
+	Bind     string
+	Host     string
+	Peers    []string
+	AutoJoin bool
 }
 
 type Node struct {
@@ -27,6 +28,7 @@ type Node struct {
 	Token         uint64
 	Membership    []string
 	PeerIDs       map[string]int
+	Peers         []string
 	Storage       *Storage
 	LogicalClock  int
 	StartedAtUnix int64
@@ -35,6 +37,7 @@ type Node struct {
 	Failed        map[string]bool
 	LeaderID      int
 	ElectionOn    bool
+	AutoJoin      bool
 }
 
 func NewNode(cfg NodeConfig) *Node {
@@ -75,6 +78,7 @@ func NewNode(cfg NodeConfig) *Node {
 		Token:         token,
 		Membership:    membership,
 		PeerIDs:       peerIDs,
+		Peers:         cfg.Peers,
 		Storage:       NewStorageWithDefaultSlots(),
 		LogicalClock:  0,
 		StartedAtUnix: time.Now().Unix(),
@@ -82,6 +86,7 @@ func NewNode(cfg NodeConfig) *Node {
 		Failed:        make(map[string]bool),
 		LeaderID:      0,
 		ElectionOn:    false,
+		AutoJoin:      cfg.AutoJoin,
 	}
 }
 
@@ -188,6 +193,21 @@ func (n *Node) Start() {
 		time.Sleep(1 * time.Second)
 		n.RecoverFromPeers(context.Background(), DefaultRecoveryConfig())
 	}()
+
+	// Auto-join on startup if enabled
+	if n.AutoJoin && len(n.Peers) > 0 {
+		go func() {
+			time.Sleep(2 * time.Second)
+			seed := n.Peers[0]
+			fmt.Printf("[AutoJoin] Attempting to join cluster via seed %s\n", seed)
+			err := n.JoinCluster(context.Background(), seed)
+			if err != nil {
+				fmt.Printf("[AutoJoin] Failed to join via %s: %v\n", seed, err)
+			} else {
+				fmt.Printf("[AutoJoin] Successfully joined cluster via %s\n", seed)
+			}
+		}()
+	}
 
 	// Networking and distributed protocols start in later phases.
 	for {
