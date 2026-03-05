@@ -13,6 +13,24 @@ See `DEMO.md` for a step-by-step, terminal-based demo script covering:
 - Node restart + crash recovery
 - New node join + rebalancing
 
+## Web Dashboard
+
+A modern web dashboard is available in the `web/` directory:
+
+- **Real-time cluster visualization**
+- **Interactive slot management**
+- **One-click demo automation**
+- **Live cluster logs**
+- **Multi-device support**
+
+Quick start:
+1. Start your cluster
+2. Open `web/index.html` in any browser
+3. Enter seed IP and port
+4. Click **Connect**
+
+See `web/README.md` for full documentation.
+
 ## Single system vs multiple systems
 
 This codebase is **one node program**. You run the same program on:

@@ -309,12 +309,79 @@ func (n *Node) httpHandler(p3 Phase3Config) http.Handler {
 		w.WriteHeader(http.StatusAccepted)
 	})
 
+	// Admin endpoints for dashboard
+	mux.HandleFunc("GET /healthz", n.ServeHealthz)
+	mux.HandleFunc("GET /admin/cluster", n.ServeAdminCluster)
+	mux.HandleFunc("GET /admin/slots", n.ServeAdminSlots)
+	mux.HandleFunc("POST /admin/election", n.ServeAdminElection)
+	mux.HandleFunc("POST /admin/join", n.ServeAdminJoin)
+
 	return mux
 }
 
 func (n *Node) primaryForKey(key string) (RingNode, bool) {
 	ring := NewHashRing(n.Membership)
 	return ring.PrimaryNode(key)
+}
+
+func (n *Node) ServeHealthz(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})
+}
+
+func (n *Node) ServeAdminCluster(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	mu := n.MembershipSnapshot()
+	json.NewEncoder(w).Encode(mu)
+}
+
+func (n *Node) ServeAdminSlots(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	slots := make([]map[string]interface{}, 0)
+	for _, key := range DefaultSlotKeys() {
+		slot, exists := n.Storage.Get(key)
+		slotData := map[string]interface{}{
+			"slotKey": key,
+			"slot":    slot,
+			"exists":  exists,
+		}
+		slots = append(slots, slotData)
+	}
+
+	json.NewEncoder(w).Encode(slots)
+}
+
+func (n *Node) ServeAdminElection(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Trigger election
+	go n.StartElection(context.Background())
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Election triggered",
+	})
+}
+
+func (n *Node) ServeAdminJoin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	seed := r.URL.Query().Get("seed")
+	if seed == "" {
+		http.Error(w, "seed parameter required", http.StatusBadRequest)
+		return
+	}
+
+	err := n.JoinCluster(context.Background(), seed)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Join request sent",
+	})
 }
 
 func (n *Node) handlePrimaryReserve(w http.ResponseWriter, r *http.Request, p3 Phase3Config, req ReserveRequest) {
@@ -482,15 +549,6 @@ func (n *Node) readQuorum(ctx context.Context, replicas []RingNode, slotKey stri
 	}
 
 	return latest, got, latestFrom
-}
-
-func isSelfAddr(addr string, port int) bool {
-	// Addresses may be "localhost:5001" or "127.0.0.1:5001" depending on environment.
-	suffix := fmt.Sprintf(":%d", port)
-	if len(addr) < len(suffix) {
-		return false
-	}
-	return addr[len(addr)-len(suffix):] == suffix
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
