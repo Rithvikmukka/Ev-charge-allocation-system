@@ -22,13 +22,47 @@ This codebase is **one node program**. You run the same program on:
 
 Each running process is a distinct **node** in the cluster.
 
-### Multi-device configuration
+### Zero-config startup (recommended)
 
-For multiple devices, you must configure:
+For multi-device deployment, the system now supports **zero-config startup**:
+
+- **Auto IP detection**: Automatically detects the first non-loopback IPv4 address
+- **Auto port assignment**: Uses `5000 + ID` (e.g., ID 60 → port 5060)
+- **Auto ID assignment**: Uses last octet of IP as node ID (e.g., `10.12.234.60` → ID 60)
+- **Auto-join**: New nodes automatically join via the first reachable peer
+
+#### Quick start (3 laptops)
+
+```bash
+# Laptop A (seed)
+go run ./cmd --peers= --auto-join
+
+# Laptop B and C (joiners)
+go run ./cmd --peers=10.12.234.60 --auto-join
+go run ./cmd --peers=10.12.234.60 --auto-join
+```
+
+Replace `10.12.234.60` with the seed laptop’s actual IP.
+
+#### Manual configuration (if needed)
+
+For multiple devices, you can still configure manually:
 
 - `--bind`: what interface the HTTP server listens on (use `0.0.0.0` to accept connections from other devices)
 - `--advertise`: the IP/hostname that other devices should use to reach this node
 - `--peers`: comma-separated list of *reachable* `host:port` peers (use LAN IPs, not `localhost`)
+
+## Algorithms used
+
+| Algorithm | Purpose | Implementation |
+|-----------|---------|----------------|
+| **Consistent Hashing** | Distribute slots across nodes | `internal/hashring.go` |
+| **Quorum Replication** | Ensure data consistency despite failures | `internal/replication.go` (N=3, W=2, R=2) |
+| **Primary Serialization** | Prevent double booking | Primary node handles all writes for a slot |
+| **Heartbeat Failure Detection** | Detect node crashes | `internal/heartbeat.go` |
+| **Bully Leader Election** | Elect new leader when current fails | `internal/election.go` |
+| **Crash Recovery/State Transfer** | Sync restarted node with latest data | `internal/recovery.go` |
+| **Dynamic Membership/Rebalancing** | Add/remove nodes and redistribute data | `internal/scaling.go` |
 
 ## Phase 1 (implemented): Node Setup
 
@@ -176,53 +210,54 @@ Invoke-RestMethod "http://localhost:5001/reserve" -Method Post -ContentType "app
 ### How it works
 
 - `--peers` is a **seed list**.
-- A new node calls a seed using `POST /join?seed=<seedHost:port>`.
+- With `--auto-join`, new nodes automatically contact the first seed and join.
 - The seed accepts the join (`POST /internal/join`) and **broadcasts** a membership update to all nodes.
 - All nodes recompute the ring.
 - The joining node runs a **recovery/rebalance pass** (re-uses Phase 8) to pull keys it is now responsible for.
 
-### Demo: add Node4 to a 3-node cluster
+### Demo: add Node4 to a 3-node cluster (zero-config)
 
-Terminal 1:
+Terminal 1 (seed):
 
-```powershell
-go run ./cmd --id=1 --port=5001 --peers=2@localhost:5002,3@localhost:5003
+```bash
+go run ./cmd --peers= --auto-join
 ```
 
 Terminal 2:
 
-```powershell
-go run ./cmd --id=2 --port=5002 --peers=1@localhost:5001,3@localhost:5003
+```bash
+go run ./cmd --peers=10.12.234.60 --auto-join
 ```
 
 Terminal 3:
 
-```powershell
-go run ./cmd --id=3 --port=5003 --peers=1@localhost:5001,2@localhost:5002
+```bash
+go run ./cmd --peers=10.12.234.60 --auto-join
 ```
 
-Terminal 4 (start Node4 with a seed peer in `--peers`):
+Terminal 4 (new node):
 
-```powershell
-go run ./cmd --id=4 --port=5004 --peers=1@localhost:5001
-```
-
-Now tell Node4 to join using Node1 as seed:
-
-```powershell
-curl.exe -X POST "http://localhost:5004/join?seed=localhost:5001"
+```bash
+go run ./cmd --peers=10.12.234.60 --auto-join
 ```
 
 Observe:
-
 - Node1 logs `accepted join` and broadcasts membership.
 - Nodes log `applied membership update`.
 - Node4 logs it joined and runs recovery/rebalance.
 
 You can query membership from any node:
 
-```powershell
-curl.exe "http://localhost:5001/membership"
+```bash
+curl.exe "http://10.12.234.60:5001/membership"
+```
+
+### Manual join (if needed)
+
+If auto-join is disabled, manually trigger a join:
+
+```bash
+curl.exe -X POST "http://localhost:5004/join?seed=localhost:5001"
 ```
 
 ## Next phases
