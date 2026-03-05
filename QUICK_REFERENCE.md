@@ -108,7 +108,7 @@ go build -o ev-charging ./cmd
 
 ### Web Dashboard
 ```bash
-# Serve dashboard from any node
+# Open dashboard
 # Open browser to: http://localhost:5001/web/index.html
 
 # Or serve static files
@@ -148,7 +148,47 @@ netsh advfirewall show allprofiles state
 - Core logic: `internal/`
 - Tests: `internal/*_test.go`
 - Dashboard: `web/`
-- Documentation: `README.md`, `DEMO.md`
+- Documentation: `README.md`, `DEMO.md`, `QUICK_REFERENCE.md`
+
+### 4-System Demo Instructions
+
+#### Setup (3 Systems)
+```bash
+# System 1 (Seed)
+go run ./cmd --peers= --auto-join
+
+# System 2
+go run ./cmd --peers=<SYSTEM1_IP> --auto-join
+
+# System 3
+go run ./cmd --peers=<SYSTEM1_IP> --auto-join
+```
+
+#### Add 4th System
+```bash
+# System 4 (joins existing cluster)
+go run ./cmd --peers=<SYSTEM1_IP> --auto-join
+```
+
+#### Verify 4-System Cluster
+```powershell
+curl.exe "http://<SYSTEM1_IP>/membership"
+```
+
+#### Demo Sequence
+1. **Normal booking** (book 2-3 slots across systems)
+2. **Concurrent booking** (same slot on 2 systems simultaneously)
+3. **Node crash** (stop System 3, observe failure detection)
+4. **Leader election** (stop System 1, watch System 2 become leader)
+5. **Node restart** (restart System 3, observe recovery)
+6. **Scaling** (add System 4, observe rebalancing)
+
+#### Expected Behaviors
+- **Auto-join**: System 4 automatically joins via System 1
+- **Rebalancing**: Keys redistribute when System 4 joins
+- **Failure detection**: Systems 1-2 mark System 3 as failed
+- **Election**: System 2 wins election (highest ID among 1,2)
+- **Recovery**: System 3 syncs latest state on restart
 
 ## Git Commands
 ```bash

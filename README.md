@@ -13,6 +13,10 @@ See `DEMO.md` for a step-by-step, terminal-based demo script covering:
 - Node restart + crash recovery
 - New node join + rebalancing
 
+## Quick Reference
+
+See `QUICK_REFERENCE.md` for all commands, troubleshooting, and common operations.
+
 ## Web Dashboard
 
 A modern web dashboard is available in the `web/` directory:
