@@ -266,3 +266,7 @@ curl.exe -X POST "http://localhost:5004/join?seed=localhost:5001"
 - Phase 3-4: replication + quorum reads/writes
 - Phase 6-7: heartbeat failure detection + bully leader election
 - Phase 8-9: crash recovery + horizontal scaling/rebalancing
+
+## Architecture Diagram
+
+![alt text](<Architecture_diagram.png>)
