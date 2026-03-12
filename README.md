@@ -271,6 +271,6 @@ curl.exe -X POST "http://localhost:5004/join?seed=localhost:5001"
 
 ![alt text](<Architecture_diagram.png>)
 
-## Sequence Diagram
+## Slot Reservation Flow
 
-![alt text](<Sequence_diagram.png>)
+![alt text](<Slot Reservation Flow.png>)

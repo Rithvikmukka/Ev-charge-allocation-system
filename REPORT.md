@@ -200,7 +200,7 @@ Notes:
 
 ![alt text](Architecture_diagram.png)
 
-![alt text](Sequence_diagram.png)
+![alt text](Slot Reservation Flow.png)
 
 ## 8) Notes on Run Instructions (README vs DEMO)
 
