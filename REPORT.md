@@ -196,6 +196,12 @@ Notes:
 - Node restart and recovery
 - Adding a new node and observing rebalancing
 
+## 7.1) Diagrams
+
+![alt text](Architecture_diagram.png)
+
+![alt text](Sequence_diagram.png)
+
 ## 8) Notes on Run Instructions (README vs DEMO)
 
 ### Is clear information present on how to run the system?

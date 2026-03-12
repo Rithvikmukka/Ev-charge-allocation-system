@@ -56,7 +56,7 @@ For multiple devices, you can still configure manually:
 
 | Algorithm | Purpose | Implementation |
 |-----------|---------|----------------|
-| **Consistent Hashing** | Distribute slots across nodes | `internal/hashring.go` |
+| **Consistent Hashing** | Distribute slots across nodes | `internal/hashing.go` |
 | **Quorum Replication** | Ensure data consistency despite failures | `internal/replication.go` (N=3, W=2, R=2) |
 | **Primary Serialization** | Prevent double booking | Primary node handles all writes for a slot |
 | **Heartbeat Failure Detection** | Detect node crashes | `internal/heartbeat.go` |
@@ -270,3 +270,7 @@ curl.exe -X POST "http://localhost:5004/join?seed=localhost:5001"
 ## Architecture Diagram
 
 ![alt text](<Architecture_diagram.png>)
+
+## Sequence Diagram
+
+![alt text](<Sequence_diagram.png>)
